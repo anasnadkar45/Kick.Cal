@@ -17,8 +17,7 @@ export type Match = {
 
 async function getMatches(): Promise<Match[]> {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
+    process.env.BETTER_AUTH_URL ||
     "http://localhost:3000";
 
   const res = await fetch(`${baseUrl}/api/worldcup/matches`, {
