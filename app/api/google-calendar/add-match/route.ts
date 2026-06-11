@@ -51,61 +51,130 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    const existingCalendarEvent = await prisma.calendarEvent.findUnique({
-      where: {
-        userId_matchId: {
-          userId: session.user.id,
-          matchId,
-        },
-      },
-    });
+    // const existingCalendarEvent = await prisma.calendarEvent.findUnique({
+    //   where: {
+    //     userId_matchId: {
+    //       userId: session.user.id,
+    //       matchId,
+    //     },
+    //   },
+    // });
+
+
+    const startDate = new Date(match.utcDate);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
+    const eventSummary = `FIFA World Cup: ${match.homeTeamName || "TBD"
+      } vs ${match.awayTeamName || "TBD"}`;
+
+    const appEventKey = `cupclock-match-${match.id}`
+
+    let existingEvents;
+
+    try {
+      existingEvents = await calendar.events.list({
+        calendarId: "primary",
+        timeMin: new Date(startDate.getTime() - 10 * 60 * 1000).toISOString(),
+        timeMax: new Date(endDate.getTime() + 10 * 60 * 1000).toISOString(),
+        singleEvents: true,
+        showDeleted: false,
+        privateExtendedProperty: [`appEventKey=${appEventKey}`],
+      });
+    } catch (error: any) {
+      console.error("Google Calendar list error:", error);
+
+      if (error?.code === 401 || error?.status === 401) {
+        return NextResponse.json(
+          {
+            error:
+              "Google Calendar access expired or missing. Please sign in again with Google Calendar permission.",
+            needsGoogleReconnect: true,
+          },
+          { status: 401 }
+        );
+      }
+
+      throw error;
+    }
+
+    const existingCalendarEvent = existingEvents.data.items?.[0];
 
     if (existingCalendarEvent) {
       return NextResponse.json(
         {
           alreadyAdded: true,
           message: "This match is already added to your Google Calendar",
-          calendarLink: existingCalendarEvent.googleEventLink,
+          calendarLink: existingCalendarEvent.htmlLink,
+          googleEventId: existingCalendarEvent.id,
         },
         { status: 409 }
       );
     }
 
-    const startDate = new Date(match.utcDate);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-    const event = await calendar.events.insert({
-      calendarId: "primary",
-      requestBody: {
-        summary: `FIFA World Cup: ${match.homeTeamName || "TBD"} vs ${match.awayTeamName || "TBD"
-          }`,
-        description: "Wake up! Match starts soon. Added from CupClock India.",
-        start: {
-          dateTime: startDate.toISOString(),
-          timeZone: "Asia/Kolkata",
-        },
-        end: {
-          dateTime: endDate.toISOString(),
-          timeZone: "Asia/Kolkata",
-        },
-        reminders: {
-          useDefault: false,
-          overrides: [
-            {
-              method: "popup",
-              minutes: 30,
+    let event;
+
+    try {
+      event = await calendar.events.insert({
+        calendarId: "primary",
+        requestBody: {
+          summary: eventSummary,
+          description: "Wake up! Match starts soon. Added from CupClock India.",
+          start: {
+            dateTime: startDate.toISOString(),
+            timeZone: "Asia/Kolkata",
+          },
+          end: {
+            dateTime: endDate.toISOString(),
+            timeZone: "Asia/Kolkata",
+          },
+          extendedProperties: {
+            private: {
+              appEventKey,
+              matchId: match.id,
+              source: "cupclock-india",
             },
-            {
-              method: "email",
-              minutes: 60,
-            },
-          ],
+          },
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: "popup", minutes: 30 },
+              { method: "popup", minutes: 60 },
+              { method: "popup", minutes: 120 },
+              { method: "email", minutes: 60 },
+            ],
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error("Google Calendar insert error:", error);
+
+      if (error?.code === 401 || error?.status === 401) {
+        return NextResponse.json(
+          {
+            error:
+              "Google Calendar access expired or missing. Please sign in again with Google Calendar permission.",
+            needsGoogleReconnect: true,
+          },
+          { status: 401 }
+        );
+      }
+
+      throw error;
+    }
+
+    await prisma.calendarEvent.upsert({
+      where: {
+        userId_matchId: {
+          userId: session.user.id,
+          matchId,
         },
       },
-    });
-
-    await prisma.calendarEvent.create({
-      data: {
+      update: {
+        googleEventId: event.data.id!,
+        googleEventLink: event.data.htmlLink,
+      },
+      create: {
         userId: session.user.id,
         matchId,
         googleEventId: event.data.id!,

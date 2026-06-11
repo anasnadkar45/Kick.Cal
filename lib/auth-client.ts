@@ -1,9 +1,4 @@
-import { createAuthClient } from "better-auth/client";
-export const authClient = createAuthClient();
-
-const requestGoogleCalendarAccess = async () => {
-  await authClient.linkSocial({
-    provider: "google",
-    scopes: [""],
-  });
-};
+import { createAuthClient } from "better-auth/react"
+export const authClient = createAuthClient({
+    /** The base URL of the server (optional if you're using the same domain) */
+})
