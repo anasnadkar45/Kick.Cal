@@ -85,7 +85,7 @@ const MatchList = ({ matches }: { matches: Match[] }) => {
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search team..."
-                        className="w-full sm:max-w-xs"
+                        className="w-full sm:max-w-xs rounded-2xl corner-squircle"
                     />                    {/* <button className="flex size-10 items-center justify-center rounded-2xl border bg-card text-card-foreground shadow-sm transition hover:bg-accent">
                         <CalendarDotsIcon weight="duotone" size={22} />
                     </button>
@@ -108,7 +108,7 @@ const MatchList = ({ matches }: { matches: Match[] }) => {
                                 <Button
                                     key={date}
                                     onClick={() => scrollToDate(date)}
-                                    className={`h-auto min-w-[68px] flex-col rounded-2xl border px-3 py-3 text-center transition duration-300 corner-squircle ${isActive
+                                    className={`h-auto min-w-[68px] flex-col rounded-4xl border px-3 py-3 text-center transition duration-300 corner-squircle ${isActive
                                         ? "bg-primary text-primary-foreground"
                                         : "bg-secondary text-muted-foreground hover:bg-primary/80 hover:text-primary-foreground"
                                         }`}

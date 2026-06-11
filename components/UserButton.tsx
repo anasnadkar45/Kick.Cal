@@ -33,7 +33,7 @@ export default function UserButton() {
                 fetchOptions: {
                     onSuccess: () => {
                         setOpenUserDialog(false);
-                        router.push("/login");
+                        router.push("/");
                         router.refresh();
                     },
                 },

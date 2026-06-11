@@ -1,40 +1,32 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useTheme } from "next-themes"
+import * as React from "react";
+import { useTheme } from "next-themes";
 
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { MoonIcon, SunIcon } from "@phosphor-icons/react"
+import { Button } from "@/components/ui/button";
+import { MoonIcon, SunIcon } from "@phosphor-icons/react";
 
 export function ModeToggle() {
-  const { setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
+
+  function toggleTheme() {
+    setTheme(theme === "dark" ? "light" : "dark");
+  }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger >
-        <Button variant="outline" size="icon">
-          <SunIcon weight="duotone" className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-          <MoonIcon weight="duotone" className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          System
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
+    <Button
+      type="button"
+      size="icon-lg"
+      variant="secondary"
+      onClick={toggleTheme}
+      className="rounded-full corner-squircle"
+      aria-label="Toggle theme"
+    >
+      {theme === "dark" ? (
+        <MoonIcon weight="duotone" className="h-[1.2rem] w-[1.2rem]" />
+      ) : (
+        <SunIcon weight="duotone" className="h-[1.2rem] w-[1.2rem]" />
+      )}
+    </Button>
+  );
 }
