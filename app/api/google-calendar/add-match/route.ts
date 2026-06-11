@@ -16,6 +16,13 @@ export async function POST(req: NextRequest) {
 
     const { matchId } = await req.json();
 
+    if (!matchId) {
+      return NextResponse.json(
+        { error: "Match id is required" },
+        { status: 400 }
+      );
+    }
+
     const match = await prisma.match.findUnique({
       where: {
         id: matchId,
@@ -35,8 +42,12 @@ export async function POST(req: NextRequest) {
 
     if (!tokenData?.accessToken) {
       return NextResponse.json(
-        { error: "Google Calendar access token not found" },
-        { status: 400 }
+        {
+          error:
+            "Google Calendar access token not found. Please sign in again with Google Calendar permission.",
+          needsGoogleReconnect: true,
+        },
+        { status: 401 }
       );
     }
 
@@ -51,23 +62,14 @@ export async function POST(req: NextRequest) {
       auth: oauth2Client,
     });
 
-    // const existingCalendarEvent = await prisma.calendarEvent.findUnique({
-    //   where: {
-    //     userId_matchId: {
-    //       userId: session.user.id,
-    //       matchId,
-    //     },
-    //   },
-    // });
-
-
     const startDate = new Date(match.utcDate);
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
 
-    const eventSummary = `FIFA World Cup: ${match.homeTeamName || "TBD"
-      } vs ${match.awayTeamName || "TBD"}`;
+    const eventSummary = `KickCal: FIFA World Cup - ${
+      match.homeTeamName || "TBD"
+    } vs ${match.awayTeamName || "TBD"}`;
 
-    const appEventKey = `cupclock-match-${match.id}`
+    const appEventKey = `kickcal-match-${match.id}`;
 
     let existingEvents;
 
@@ -100,6 +102,25 @@ export async function POST(req: NextRequest) {
     const existingCalendarEvent = existingEvents.data.items?.[0];
 
     if (existingCalendarEvent) {
+      await prisma.calendarEvent.upsert({
+        where: {
+          userId_matchId: {
+            userId: session.user.id,
+            matchId,
+          },
+        },
+        update: {
+          googleEventId: existingCalendarEvent.id!,
+          googleEventLink: existingCalendarEvent.htmlLink,
+        },
+        create: {
+          userId: session.user.id,
+          matchId,
+          googleEventId: existingCalendarEvent.id!,
+          googleEventLink: existingCalendarEvent.htmlLink,
+        },
+      });
+
       return NextResponse.json(
         {
           alreadyAdded: true,
@@ -111,7 +132,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
     let event;
 
     try {
@@ -119,7 +139,7 @@ export async function POST(req: NextRequest) {
         calendarId: "primary",
         requestBody: {
           summary: eventSummary,
-          description: "Wake up! Match starts soon. Added from CupClock India.",
+          description: "Match reminder added from KickCal.",
           start: {
             dateTime: startDate.toISOString(),
             timeZone: "Asia/Kolkata",
@@ -132,16 +152,28 @@ export async function POST(req: NextRequest) {
             private: {
               appEventKey,
               matchId: match.id,
-              source: "cupclock-india",
+              source: "kickcal",
             },
           },
           reminders: {
             useDefault: false,
             overrides: [
-              { method: "popup", minutes: 30 },
-              { method: "popup", minutes: 60 },
-              { method: "popup", minutes: 120 },
-              { method: "email", minutes: 60 },
+              {
+                method: "popup",
+                minutes: 30,
+              },
+              {
+                method: "popup",
+                minutes: 60,
+              },
+              {
+                method: "popup",
+                minutes: 120,
+              },
+              {
+                method: "email",
+                minutes: 60,
+              },
             ],
           },
         },
@@ -163,6 +195,13 @@ export async function POST(req: NextRequest) {
       throw error;
     }
 
+    if (!event.data.id) {
+      return NextResponse.json(
+        { error: "Google Calendar event was created without an event id" },
+        { status: 500 }
+      );
+    }
+
     await prisma.calendarEvent.upsert({
       where: {
         userId_matchId: {
@@ -171,13 +210,13 @@ export async function POST(req: NextRequest) {
         },
       },
       update: {
-        googleEventId: event.data.id!,
+        googleEventId: event.data.id,
         googleEventLink: event.data.htmlLink,
       },
       create: {
         userId: session.user.id,
         matchId,
-        googleEventId: event.data.id!,
+        googleEventId: event.data.id,
         googleEventLink: event.data.htmlLink,
       },
     });
@@ -186,6 +225,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Match added to Google Calendar",
       calendarLink: event.data.htmlLink,
+      googleEventId: event.data.id,
     });
   } catch (error) {
     console.error("Google Calendar error:", error);
