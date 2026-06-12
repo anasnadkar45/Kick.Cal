@@ -5,6 +5,8 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import BottomBar from "@/components/layout/BottomBar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -99,6 +101,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <Analytics/>
+        <SpeedInsights/>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-WM1EB7WKZY"
           strategy="afterInteractive"
