@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import BottomBar from "@/components/layout/BottomBar";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,9 +46,7 @@ export const metadata: Metadata = {
   ],
   creator: "Anas Nadkar",
   publisher: "KickCal",
-  metadataBase: new URL(
-    process.env.BETTER_AUTH_URL || "http://localhost:3000"
-  ),
+  metadataBase: new URL(process.env.BETTER_AUTH_URL || "http://localhost:3000"),
   openGraph: {
     title: "KickCal - FIFA World Cup Match Schedule",
     description:
@@ -86,19 +88,38 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-mono", jetbrainsMono.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-mono",
+        jetbrainsMono.variable
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-WM1EB7WKZY"
+          strategy="afterInteractive"
+        />
+
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-WM1EB7WKZY');
+          `}
+        </Script>
+
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <>
-            {children}
-          </>
+          {children}
           <BottomBar />
         </ThemeProvider>
       </body>
